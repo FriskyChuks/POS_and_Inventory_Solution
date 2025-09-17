@@ -1,0 +1,15 @@
+CONTENTS
+
+✅ Product & category management
+✅ Profit & cost tracking
+✅ Sales filtering (by user, customer, date)
+✅ Daily and monthly analytics
+✅ Low stock and expiry alerts
+✅ Payment method summary
+✅ Role-based dashboard (admin/manager/staff)
+
+
+
+item (brand)
+
+supplies(item-brand) --> price

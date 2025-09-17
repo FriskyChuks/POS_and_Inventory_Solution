@@ -1,0 +1,239 @@
+{% load mathfilters %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Sales Invoice</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 1cm;
+        }
+
+        body {
+            font-family: "DejaVu Sans", serif;
+            font-size: 12px;
+            line-height: 1.25;
+            color: #111;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            color: #032774;
+        }
+
+        .header h2 {
+            margin: 0;
+            font-size: 11px;
+            font-weight: normal;
+        }
+
+        .header h3 {
+            margin: 4px 0;
+            font-size: 10px;
+            font-style: italic;
+        }
+
+        hr {
+            border: 0.5px solid #444;
+            margin: 8px 0;
+        }
+
+        .meta {
+            margin-bottom: 6px;
+        }
+
+        .meta p {
+            margin: 2px 0;
+            font-size: 11px;
+        }
+
+        /* Invoice table: pixel widths (fallback for PDF renderers) */
+        table.invoice-table {
+            width: 760px;
+            /* fixed content width used for PDF */
+            max-width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+            margin-bottom: 10px;
+            table-layout: fixed;
+            /* force columns to respect col widths */
+            font-size: 11px;
+        }
+
+        table.invoice-table th,
+        table.invoice-table td {
+            border: 1px solid #333;
+            padding: 4px 6px;
+            vertical-align: middle;
+            line-height: 1.15;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        table.invoice-table th {
+            background: #f0f6ff;
+            font-weight: normal;
+        }
+
+        /* alignment helpers */
+        .sn,
+        .qty {
+            text-align: center;
+        }
+
+        .item,
+        .brand {
+            text-align: left;
+            padding-left: 6px;
+        }
+
+        .num {
+            text-align: right;
+            padding-right: 6px;
+        }
+
+        .totals {
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        .totals h3,
+        .totals h2 {
+            margin: 3px 0;
+        }
+
+        .totals h2 {
+            font-size: 14px;
+            color: #032774;
+        }
+
+        .payments {
+            margin-top: 6px;
+            text-align: right;
+        }
+
+        .payments ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .payments li {
+            font-size: 11px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 14px;
+            font-size: 10px;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>BUSINESS NAME HERE</h1>
+        <h2>BUSINESS ADDRESS HERE</h2>
+        <h3>web-address | 08190878967 | 09023423423 | businessmail@email.com</h3>
+    </div>
+    <hr />
+
+    <!-- Invoice meta (condensed: two lines) -->
+    <div class="meta">
+        <p>
+            <strong>Invoice No:</strong> {{ invoice.invoice_number }}
+            &nbsp;&nbsp; | &nbsp;&nbsp;
+            <strong>Date:</strong> {{ invoice.sale_date }}
+        </p>
+        <p>
+            <strong>Customer:</strong> {{ invoice.customer|default:"---" }}
+            &nbsp;&nbsp; | &nbsp;&nbsp;
+            <strong>Phone:</strong> {{ invoice.customer_phone|default:"---" }}
+            &nbsp;&nbsp; | &nbsp;&nbsp;
+            <strong>Address:</strong> {{ invoice.customer_address|default:"---" }}
+        </p>
+    </div>
+
+    <!-- Items table (pixel-based widths) -->
+    <table class="invoice-table">
+        <colgroup>
+            <col style="width:50px;"> <!-- S/N -->
+            <col style="width:250px;"> <!-- Item -->
+            <col style="width:200px;"> <!-- Brand -->
+            <col style="width:50px;"> <!-- Qty -->
+            <col style="width:100px;"> <!-- Price -->
+            <col style="width:70px;"> <!-- Discount -->
+            <col style="width:120px;"> <!-- Subtotal -->
+        </colgroup>
+
+        <thead>
+            <tr>
+                <th class="sn" style="width:50px;">#</th>
+                <th class="item" style="width:250px;">Item</th>
+                <th class="brand" style="width:200px;">Brand</th>
+                <th class="qty" style="width:50px;">Qty</th>
+                <th class="num" style="width:100px;">Price</th>
+                <th class="num" style="width:70px;">Discount</th>
+                <th class="num" style="width:120px;">Subtotal</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="sn" width="40px">{{ forloop.counter }}</td>
+                <td class="item" width="320px">{{ item.brand.item.name }}</td>
+                <td class="brand" width="160px">{{ item.brand }}</td>
+                <td class="qty" width="40px">{{ item.quantity }}</td>
+                <td class="num" width="70px">N{{ item.unit_price|intcomma }}</td>
+                <td class="num" width="60px">N{{ item.discount|intcomma }}</td>
+                <td class="num" width="70px">N{{ item.unit_price|mul:item.quantity|sub:item.discount|intcomma }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Totals + Payments -->
+    <div class="totals">
+        <h3>Subtotal: N{{ subtotal|intcomma }}</h3>
+        <h3>Discount: N{{ sales_discount|intcomma }}</h3>
+        <h2>Total Payable: N{{ total|intcomma }}</h2>
+    </div>
+
+    <div class="payments">
+        <strong>Payment Method(s):</strong>
+        {% if payments %}
+        <ul>
+            {% for pay in payments %}
+            <li>{{ pay.method|capfirst }} — N{{ pay.amount|intcomma }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>{{ invoice.payment_method|capfirst }}</p>
+        {% endif %}
+    </div>
+
+    <hr />
+
+    <p style="text-align: center; font-size: 11px;">
+        Thank you for your patronage! Please make all checks payable to BUSINESS NAME HERE
+    </p>
+
+    <footer>
+        Designed & implemented by FriskyTech —
+        <a href="https://friskytech.com">friskytech.com.ng</a> | 08032610270 | friskytechfrisky@gmail.com
+    </footer>
+</body>
+
+</html>
